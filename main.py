@@ -7,6 +7,12 @@ from dotenv import load_dotenv
 from keyboards import get_shop_keyboard # імпортуєм наші модельки клави
 
 
+from aiogram.fsm.state import StatesGroup, State
+       #fsm- механізм який покроково запамятовує на чому зупигився коистувач
+from aiogram.fsm.context import FSMContext
+       #керування кроками та збереження даних користувача
+
+
 
 #завантажую токен з файлу .env
 load_dotenv()
@@ -15,6 +21,10 @@ TOKEN = os.getenv("BOT_TOKEN")
 #запускаємо бота та диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+
+class From(StatesGroup):
+    waiting_for_phone = State()
 
 
 #обробляємо команду старт
@@ -40,9 +50,23 @@ async def process_buy_aiogram(callback: types.CallbackQuery):
 
 
 @dp.callback_query(F.data == "Зв'язатися з менеджером")
-async def call_manager(callback: types.CallbackQuery):
+async def call_manager(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer("Заявка прийнята")
-    await callback.message.answer("Менеджер вам телефонує.")
+    await callback.message.answer("Будь ласка введіть ваш номер телефону.")
+    await state.set_state(From.waiting_for_phone)
+
+@dp.message(From.waiting_for_phone)
+async def process_phone(message: types.Message, state: FSMContext):
+    phone = message.text
+    await message.answer(f"Дякуємо, {message.from_user.first_name}!"
+                         f"Номер {phone} збережено. Менеджер зателефонує.")
+
+
+    with open("leads.txt", "a", encoding="utf-8") as file:
+        file.write(f"User: {message.from_user.full_name} | Phone: {phone}\n")
+
+    await state.clear()
+
 
 
 
