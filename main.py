@@ -12,6 +12,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
        #керування кроками та збереження даних користувача
 
+from db import init_db, add_lead
 
 
 #завантажую токен з файлу .env
@@ -55,6 +56,7 @@ async def call_manager(callback: types.CallbackQuery, state: FSMContext):
     await callback.message.answer("Будь ласка введіть ваш номер телефону.")
     await state.set_state(From.waiting_for_phone)
 
+
 @dp.message(From.waiting_for_phone)
 async def process_phone(message: types.Message, state: FSMContext):
     phone = message.text
@@ -62,9 +64,8 @@ async def process_phone(message: types.Message, state: FSMContext):
                          f"Номер {phone} збережено. Менеджер зателефонує.")
 
 
-    with open("leads.txt", "a", encoding="utf-8") as file:
-        file.write(f"User: {message.from_user.full_name} | Phone: {phone}\n")
-
+    add_lead(message.from_user.full_name, message.from_user.id, phone)
+    await message.answer("Дякуємо, ваша заявка збережена в базі даних.")
     await state.clear()
 
 
@@ -72,6 +73,7 @@ async def process_phone(message: types.Message, state: FSMContext):
 
 # головна перевірка
 async def main():
+    init_db() #наша таблиця створюється при запуску
     print("--бот активний--")
     await dp.start_polling(bot)
 
